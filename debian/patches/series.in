@@ -14,3 +14,5 @@ fix-makefile-substitution-bug.patch
 no_neon_on_arm.patch
 add-nativehandle-attribute.patch
 fix-for-bmo795395.patch
+mozilla-kde.patch
+firefox-kde.patch

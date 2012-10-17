@@ -1,3 +1,9 @@
+firefox (16.0.1+build1-0ubuntu2~ppa1) quantal; urgency=low
+
+  * Apply KDE specific patches
+
+ -- Rohan Garg <rohangarg@kubuntu.org>  Tue, 16 Oct 2012 15:05:58 +0100
+
 firefox (16.0.1+build1-0ubuntu1) quantal-security; urgency=low
 
   * New upstream stable release (FIREFOX_16_0_1_BUILD1)
