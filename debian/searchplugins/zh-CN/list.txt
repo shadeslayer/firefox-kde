@@ -1,0 +1,7 @@
+[Overrides]
+amazondotcn
+baidu
+google*
+
+[Additions]
+duckduckgo

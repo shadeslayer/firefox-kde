@@ -1,0 +1,91 @@
+Description: Support building globalmenu-extension from the Firefox source
+Author: Chris Coulson <chris.coulson@canonical.com>
+Forwarded: not-needed
+
+--- a/config/autoconf.mk.in
++++ b/config/autoconf.mk.in
+@@ -546,6 +546,11 @@ MOZ_ENABLE_D3D10_LAYER  = @MOZ_ENABLE_D3
+ MOZ_GTK2_CFLAGS		= @MOZ_GTK2_CFLAGS@
+ MOZ_GTK2_LIBS		= @MOZ_GTK2_LIBS@
+ 
++DBUSMENU_CFLAGS		= @DBUSMENU_CFLAGS@
++DBUSMENU_LIBS		= @DBUSMENU_LIBS@
++
++UNITY_GLOBALMENU	= @UNITY_GLOBALMENU@
++
+ MOZ_QT_CFLAGS		= @MOZ_QT_CFLAGS@
+ MOZ_QT_LIBS		= @MOZ_QT_LIBS@
+ MOZ_ENABLE_QTNETWORK    = @MOZ_ENABLE_QTNETWORK@
+--- a/config/system-headers
++++ b/config/system-headers
+@@ -391,6 +391,10 @@ LFocusBox.h
+ LGrafPortView.h
+ LHandleStream.h
+ libc_r.h
++#ifdef UNITY_GLOBALMENU
++libdbusmenu-glib/server.h
++libdbusmenu-gtk/menuitem.h
++#endif
+ libelf.h
+ libelf/libelf.h
+ libgen.h
+@@ -1016,6 +1020,11 @@ osso-mem.h
+ #ifdef MOZ_ENABLE_GIO
+ gio/gio.h
+ #endif
++#ifdef UNITY_GLOBALMENU
++#ifndef MOZ_ENABLE_GIO
++gio/gio.h
++#endif
++#endif
+ #ifdef MOZ_ENABLE_LIBCONIC
+ conic/conicconnection.h
+ conic/conicconnectionevent.h
+--- a/configure.in
++++ b/configure.in
+@@ -8600,6 +8600,20 @@ AC_SUBST(MOZ_CAIRO_LIBS)
+ AC_SUBST(MOZ_TREE_PIXMAN)
+ 
+ dnl ========================================================
++dnl Dbus-Menu
++dnl ========================================================
++
++UNITY_GLOBALMENU=0
++if test `echo "$MOZ_EXTENSIONS" | grep -c globalmenu` -ne 0; then
++   PKG_CHECK_MODULES(DBUSMENU, dbusmenu-gtk-0.4 gio-2.0)
++   UNITY_GLOBALMENU=1
++   AC_SUBST(DBUSMENU_CFLAGS)
++   AC_SUBST(DBUSMENU_LIBS)
++   AC_DEFINE(UNITY_GLOBALMENU)
++fi
++AC_SUBST(UNITY_GLOBALMENU)
++
++dnl ========================================================
+ dnl qcms
+ dnl ========================================================
+ 
+--- a/js/src/config/system-headers
++++ b/js/src/config/system-headers
+@@ -391,6 +391,10 @@ LFocusBox.h
+ LGrafPortView.h
+ LHandleStream.h
+ libc_r.h
++#ifdef UNITY_GLOBALMENU
++libdbusmenu-glib/server.h
++libdbusmenu-gtk/menuitem.h
++#endif
+ libelf.h
+ libelf/libelf.h
+ libgen.h
+@@ -1016,6 +1020,11 @@ osso-mem.h
+ #ifdef MOZ_ENABLE_GIO
+ gio/gio.h
+ #endif
++#ifdef UNITY_GLOBALMENU
++#ifndef MOZ_ENABLE_GIO
++gio/gio.h
++#endif
++#endif
+ #ifdef MOZ_ENABLE_LIBCONIC
+ conic/conicconnection.h
+ conic/conicconnectionevent.h

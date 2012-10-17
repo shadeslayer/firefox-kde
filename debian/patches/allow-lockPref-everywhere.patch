@@ -1,0 +1,114 @@
+Description: Allow use of lockPref in all preference files
+Author: Alexander Sack <asac@ubuntu.com>
+Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=467738
+Forwarded: https://bugzilla.mozilla.org/attachment.cgi?id=351145
+
+---
+ modules/libpref/src/prefapi.cpp  |    5 ++++-
+ modules/libpref/src/prefapi.h    |    3 ++-
+ modules/libpref/src/prefread.cpp |   11 ++++++++---
+ modules/libpref/src/prefread.h   |    4 +++-
+ 4 files changed, 17 insertions(+), 6 deletions(-)
+
+Index: mozilla/modules/libpref/src/prefread.cpp
+===================================================================
+--- mozilla.orig/modules/libpref/src/prefread.cpp	2012-04-10 03:09:04.000000000 +0100
++++ mozilla/modules/libpref/src/prefread.cpp	2012-04-10 11:07:03.091935747 +0100
+@@ -75,6 +75,7 @@
+ #define BITS_PER_HEX_DIGIT      4
+ 
+ static const char kUserPref[] = "user_pref";
++static const char kLockPref[] = "lockPref";
+ static const char kPref[] = "pref";
+ static const char kTrue[] = "true";
+ static const char kFalse[] = "false";
+@@ -161,7 +162,7 @@
+     default:
+         break;
+     }
+-    (*ps->reader)(ps->closure, ps->lb, value, ps->vtype, ps->fdefault);
++    (*ps->reader)(ps->closure, ps->lb, value, ps->vtype, ps->fdefault, ps->flock);
+     return true;
+ }
+ 
+@@ -220,6 +221,7 @@
+                 ps->vb    = NULL;
+                 ps->vtype = PREF_INVALID;
+                 ps->fdefault = false;
++                ps->flock = false;
+             }
+             switch (c) {
+             case '/':       /* begin comment block or line? */
+@@ -230,7 +232,9 @@
+                 break;
+             case 'u':       /* indicating user_pref */
+             case 'p':       /* indicating pref */
+-                ps->smatch = (c == 'u' ? kUserPref : kPref);
++            case 'l':       /* indicating lockPref */
++                ps->smatch = (c == 'u' ? kUserPref :
++                                         (c == 'p' ? kPref : kLockPref));
+                 ps->sindex = 1;
+                 ps->nextstate = PREF_PARSE_UNTIL_OPEN_PAREN;
+                 state = PREF_PARSE_MATCH_STRING;
+@@ -274,7 +278,8 @@
+         /* name parsing */
+         case PREF_PARSE_UNTIL_NAME:
+             if (c == '\"' || c == '\'') {
+-                ps->fdefault = (ps->smatch == kPref);
++                ps->fdefault = (ps->smatch != kUserPref);
++                ps->flock = (ps->smatch == kLockPref);
+                 ps->quotechar = c;
+                 ps->nextstate = PREF_PARSE_UNTIL_COMMA; /* return here when done */
+                 state = PREF_PARSE_QUOTED_STRING;
+Index: mozilla/modules/libpref/src/prefread.h
+===================================================================
+--- mozilla.orig/modules/libpref/src/prefread.h	2012-04-10 03:09:04.000000000 +0100
++++ mozilla/modules/libpref/src/prefread.h	2012-04-10 11:07:03.095935747 +0100
+@@ -62,7 +62,8 @@
+                            const char *pref,
+                            PrefValue   val,
+                            PrefType    type,
+-                           bool        defPref);
++                           bool        defPref,
++                           bool        lockPref);
+ 
+ /* structure fields are private */
+ typedef struct PrefParseState {
+@@ -83,6 +84,7 @@
+     char       *vb;         /* value buffer (ptr into lb)    */
+     PrefType    vtype;      /* PREF_STRING,INT,BOOL          */
+     bool        fdefault;   /* true if (default) pref     */
++    bool        flock;      /* PR_TRUE if pref to be locked  */
+ } PrefParseState;
+ 
+ /**
+Index: mozilla/modules/libpref/src/prefapi.h
+===================================================================
+--- mozilla.orig/modules/libpref/src/prefapi.h	2012-04-10 03:09:04.000000000 +0100
++++ mozilla/modules/libpref/src/prefapi.h	2012-04-10 11:07:03.095935747 +0100
+@@ -208,7 +208,8 @@
+                           const char *pref,
+                           PrefValue   value,
+                           PrefType    type,
+-                          bool        isDefault);
++                          bool        isDefault,
++                          bool        isLocked);
+ 
+ PR_END_EXTERN_C
+ #endif
+Index: mozilla/modules/libpref/src/prefapi.cpp
+===================================================================
+--- mozilla.orig/modules/libpref/src/prefapi.cpp	2012-04-10 03:09:04.000000000 +0100
++++ mozilla/modules/libpref/src/prefapi.cpp	2012-04-10 11:08:55.899933741 +0100
+@@ -948,7 +948,10 @@
+                          const char *pref,
+                          PrefValue   value,
+                          PrefType    type,
+-                         bool        isDefault)
++                         bool        isDefault,
++                         bool        isLocked)
+ {
+     pref_HashPref(pref, value, type, isDefault ? kPrefSetDefault : kPrefForceSet);
++    if (isLocked)
++       PREF_LockPref(pref, true);
+ }

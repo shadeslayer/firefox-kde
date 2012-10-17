@@ -1,0 +1,6 @@
+[Overrides]
+amazon*
+google*
+
+[Additions]
+duckduckgo

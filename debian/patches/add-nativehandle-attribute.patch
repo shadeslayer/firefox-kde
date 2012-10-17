@@ -1,0 +1,310 @@
+Index: firefox-16.0~b1+build1/widget/nsIBaseWindow.idl
+===================================================================
+--- firefox-16.0~b1+build1.orig/widget/nsIBaseWindow.idl	2012-08-28 17:37:20.000000000 +0100
++++ firefox-16.0~b1+build1/widget/nsIBaseWindow.idl	2012-08-29 11:56:28.898211797 +0100
+@@ -182,3 +182,18 @@
+ 	*/
+ 	attribute wstring title;
+ };
++
++[scriptable, uuid(533be2f3-1d28-4264-ad2f-d049d4a9ae10)]
++interface nsIBaseWindow_UBUNTU_ONLY : nsISupports
++{
++	/*
++	This is the handle (HWND, GdkWindow*, ...) to the native window of the
++	control, exposed as a DOMString.
++
++	@return DOMString in hex format with "0x" prepended, or empty string if
++	mainWidget undefined
++
++	@throws NS_ERROR_NOT_IMPLEMENTED for non-XULWindows
++	*/
++	readonly attribute DOMString nativeHandle;
++};
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsChromeTreeOwner.h
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsChromeTreeOwner.h	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsChromeTreeOwner.h	2012-08-29 11:55:59.462210588 +0100
+@@ -24,7 +24,8 @@
+                           public nsIBaseWindow, 
+                           public nsIInterfaceRequestor,
+                           public nsIWebProgressListener,
+-                          public nsSupportsWeakReference
++                          public nsSupportsWeakReference,
++                          public nsIBaseWindow_UBUNTU_ONLY
+ {
+ friend class nsXULWindow;
+ 
+@@ -35,6 +36,7 @@
+    NS_DECL_NSIBASEWINDOW
+    NS_DECL_NSIDOCSHELLTREEOWNER
+    NS_DECL_NSIWEBPROGRESSLISTENER
++   NS_DECL_NSIBASEWINDOW_UBUNTU_ONLY
+ 
+    static nsresult InitGlobals();
+    static void     FreeGlobals();
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsChromeTreeOwner.cpp
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsChromeTreeOwner.cpp	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsChromeTreeOwner.cpp	2012-08-29 11:55:59.462210588 +0100
+@@ -98,6 +98,7 @@
+    NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
+    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
++   NS_INTERFACE_MAP_ENTRY(nsIBaseWindow_UBUNTU_ONLY)
+ NS_INTERFACE_MAP_END
+ 
+ //*****************************************************************************
+@@ -543,6 +544,16 @@
+ }
+ 
+ //*****************************************************************************
++// nsChromeTreeOwner::nsIBaseWindow_UBUNTU_ONLY
++//*****************************************************************************   
++
++NS_IMETHODIMP nsChromeTreeOwner::GetNativeHandle(nsAString& aNativeHandle)
++{
++   NS_ENSURE_STATE(mXULWindow);
++   return mXULWindow->GetNativeHandle(aNativeHandle);
++}
++
++//*****************************************************************************
+ // nsChromeTreeOwner: Helpers
+ //*****************************************************************************   
+ 
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsContentTreeOwner.cpp
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsContentTreeOwner.cpp	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsContentTreeOwner.cpp	2012-08-29 11:55:59.462210588 +0100
+@@ -98,6 +98,7 @@
+    NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome3)
+    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+    NS_INTERFACE_MAP_ENTRY(nsIWindowProvider)
++   NS_INTERFACE_MAP_ENTRY(nsIBaseWindow_UBUNTU_ONLY)
+    // NOTE: This is using aggregation because there are some properties and
+    // method on nsIBaseWindow (which we implement) and on
+    // nsIEmbeddingSiteWindow (which we also implement) that have the same name.
+@@ -928,6 +929,16 @@
+ }
+ 
+ //*****************************************************************************
++// nsContentTreeOwner: nsIBaseWindow_UBUNTU_ONLY
++//*****************************************************************************   
++
++NS_IMETHODIMP nsContentTreeOwner::GetNativeHandle(nsAString& aNativeHandle)
++{
++   NS_ENSURE_STATE(mXULWindow);
++   return mXULWindow->GetNativeHandle(aNativeHandle);
++}
++
++//*****************************************************************************
+ // nsContentTreeOwner: Accessors
+ //*****************************************************************************
+ 
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsContentTreeOwner.h
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsContentTreeOwner.h	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsContentTreeOwner.h	2012-08-29 11:55:59.462210588 +0100
+@@ -26,7 +26,8 @@
+                            public nsIBaseWindow,
+                            public nsIInterfaceRequestor,
+                            public nsIWebBrowserChrome3,
+-                           public nsIWindowProvider
++                           public nsIWindowProvider,
++                           public nsIBaseWindow_UBUNTU_ONLY
+ {
+ friend class nsXULWindow;
+ friend class nsSiteWindow;
+@@ -41,6 +42,7 @@
+    NS_DECL_NSIWEBBROWSERCHROME2
+    NS_DECL_NSIWEBBROWSERCHROME3
+    NS_DECL_NSIWINDOWPROVIDER
++   NS_DECL_NSIBASEWINDOW_UBUNTU_ONLY
+ 
+ protected:
+    nsContentTreeOwner(bool fPrimary);
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsXULWindow.cpp
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsXULWindow.cpp	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsXULWindow.cpp	2012-08-29 11:55:59.462210588 +0100
+@@ -8,6 +8,7 @@
+ #include "nsXULWindow.h"
+ 
+ // Helper classes
++#include "nsPrintfCString.h"
+ #include "nsString.h"
+ #include "nsWidgetsCID.h"
+ #include "prprf.h"
+@@ -135,6 +136,7 @@
+   NS_INTERFACE_MAP_ENTRY(nsIBaseWindow)
+   NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
++  NS_INTERFACE_MAP_ENTRY(nsIBaseWindow_UBUNTU_ONLY)
+   if (aIID.Equals(NS_GET_IID(nsXULWindow)))
+     foundInterface = reinterpret_cast<nsISupports*>(this);
+   else
+@@ -856,6 +858,26 @@
+ 
+ 
+ //*****************************************************************************
++// nsXULWindow::nsIBaseWindow_UBUNTU_ONLY
++//*****************************************************************************   
++
++NS_IMETHODIMP nsXULWindow::GetNativeHandle(nsAString& aNativeHandle)
++{
++  nsCOMPtr<nsIWidget> mainWidget;
++  NS_ENSURE_SUCCESS(GetMainWidget(getter_AddRefs(mainWidget)), NS_ERROR_FAILURE);
++
++  if (mainWidget) {
++    nativeWindow nativeWindowPtr = mainWidget->GetNativeData(NS_NATIVE_WINDOW);
++    /* the nativeWindow pointer is converted to and exposed as a string. This
++       is a more reliable way not to lose information (as opposed to JS
++       |Number| for instance) */
++    aNativeHandle = NS_ConvertASCIItoUTF16(nsPrintfCString("0x%p", nativeWindowPtr));
++  }
++
++  return NS_OK;
++}
++
++//*****************************************************************************
+ // nsXULWindow: Helpers
+ //*****************************************************************************   
+ 
+Index: firefox-16.0~b1+build1/xpfe/appshell/src/nsXULWindow.h
+===================================================================
+--- firefox-16.0~b1+build1.orig/xpfe/appshell/src/nsXULWindow.h	2012-08-28 17:37:23.000000000 +0100
++++ firefox-16.0~b1+build1/xpfe/appshell/src/nsXULWindow.h	2012-08-29 11:55:59.462210588 +0100
+@@ -47,7 +47,8 @@
+ class nsXULWindow : public nsIBaseWindow,
+                     public nsIInterfaceRequestor,
+                     public nsIXULWindow,
+-                    public nsSupportsWeakReference
++                    public nsSupportsWeakReference,
++                    public nsIBaseWindow_UBUNTU_ONLY
+ {
+ friend class nsChromeTreeOwner;
+ friend class nsContentTreeOwner;
+@@ -58,6 +59,7 @@
+    NS_DECL_NSIINTERFACEREQUESTOR
+    NS_DECL_NSIXULWINDOW
+    NS_DECL_NSIBASEWINDOW
++   NS_DECL_NSIBASEWINDOW_UBUNTU_ONLY
+ 
+    NS_DECLARE_STATIC_IID_ACCESSOR(NS_XULWINDOW_IMPL_CID)
+ 
+Index: firefox-16.0~b1+build1/widget/tests/Makefile.in
+===================================================================
+--- firefox-16.0~b1+build1.orig/widget/tests/Makefile.in	2012-08-28 17:37:21.000000000 +0100
++++ firefox-16.0~b1+build1/widget/tests/Makefile.in	2012-08-29 11:55:59.466210587 +0100
+@@ -30,6 +30,9 @@
+ 
+ CPP_UNIT_TESTS += TestAppShellSteadyState.cpp
+ 
++MOCHITEST_FILES =	test_bug760802.html \
++		$(NULL)
++
+ MOCHITEST_CHROME_FILES =	test_bug343416.xul \
+ 		test_bug429954.xul \
+ 		window_bug429954.xul \
+@@ -92,14 +95,14 @@
+ 		window_mouse_scroll_win.html \
+ 		$(NULL)
+ 
+-MOCHITEST_FILES =	test_bug565392.html \
++MOCHITEST_FILES +=	test_bug565392.html \
+ 		test_picker_no_crash.html \
+ 		window_picker_no_crash_child.html \
+ 		$(NULL)
+ endif
+ 
+ ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
+-MOCHITEST_FILES = 	plugin_scroll_invalidation.html \
++MOCHITEST_FILES += 	plugin_scroll_invalidation.html \
+ 		test_plugin_scroll_invalidation.html \
+ 		$(NULL)
+ endif
+Index: firefox-16.0~b1+build1/widget/tests/test_bug760802.html
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ firefox-16.0~b1+build1/widget/tests/test_bug760802.html	2012-08-29 11:55:59.466210587 +0100
+@@ -0,0 +1,80 @@
++<!DOCTYPE HTML>
++<html>
++<!--
++https://bugzilla.mozilla.org/show_bug.cgi?id=760802
++-->
++<head>
++  <meta charset="utf-8">
++  <title>Test for Bug 760802</title>
++  <script type="application/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
++  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
++</head>
++<body>
++<a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=760802">Mozilla Bug 760802</a>
++<p id="display"></p>
++<div id="content" style="display: none">
++
++</div>
++<iframe id="iframe_not_editable" width="300" height="150"
++        src="data:text/html,&lt;html&gt;&lt;body&gt;&lt;/body&gt;&lt;/html&gt;"></iframe><br/>
++<pre id="test">
++<script type="application/javascript">
++
++netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
++const Cc = Components.classes;
++const Ci = Components.interfaces;
++
++function getBaseWindowInterface(win) {
++  return win.QueryInterface(Ci.nsIInterfaceRequestor)
++    .getInterface(Ci.nsIWebNavigation)
++    .QueryInterface(Ci.nsIDocShellTreeItem)
++    .treeOwner
++    .QueryInterface(Ci.nsIInterfaceRequestor)
++    .nsIBaseWindow_UBUNTU_ONLY;
++}
++
++function shouldThrow(fun) {
++  try {
++    fun.call();
++    return false;
++  } catch (e) {
++    return true;
++  }
++}
++function doesntThrow(fun) !shouldThrow(fun)
++
++
++var baseWindow = getBaseWindowInterface(window);
++var nativeHandle = baseWindow.nativeHandle;
++$("display").innerHTML = "found nativeHandle for this window: "+nativeHandle;
++
++//var wm = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
++//var win = wm.getMostRecentWindow("navigator:browser");
++//var docShell = win.gBrowser.docShell;
++
++//ok(
++//  shouldThrow(function(){docShell.getInterface(Ci.nsIBaseWindow).nativeHandle;}),
++//  "nativeHandle should not be implemented for nsDocShell"
++//);
++
++ok(typeof(nativeHandle) === "string", "nativeHandle should be a string");
++ok(nativeHandle.match(/^0x[0-9a-f]+$/), "nativeHandle should have a memory address format");
++
++var iWin = window.document.getElementById("iframe_not_editable").contentWindow;
++is(getBaseWindowInterface(iWin).nativeHandle, nativeHandle,
++              "the nativeHandle of an iframe should be its parent's nativeHandle");
++
++var dialog = window.openDialog("data:text/plain,this is an active window.", "_blank",
++                               "chrome,dialog=yes,width=100,height=100");
++
++isnot(getBaseWindowInterface(dialog).nativeHandle, "",
++      "the nativeHandle of a dialog should not be empty");
++
++dialog.close();
++
++todo(false, "the nativeHandle of a window without a mainWidget should be empty"); // how to build a window without a mainWidget ?
++
++</script>
++</pre>
++</body>
++</html>
