@@ -1,0 +1,26 @@
+{
+    "matches": [
+        {
+            "Url": {
+                "template": "https?://www\\.google\\.[^/]+/search.*"
+            }
+        },
+        {
+            "Url": {
+                "template": "https?://www\\.amazon.*"
+            }
+        },
+        {
+            "Url": {
+                "template": "https?://.*baidu\\.com.*"
+            }
+        }
+    ],
+    "ignore": [
+        {
+            "Url": {
+                "template": "https?://zhidao\\.baidu\\.com.*"
+            }
+        }
+    ]
+}

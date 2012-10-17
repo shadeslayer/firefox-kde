@@ -1,0 +1,32 @@
+
+# HG changeset patch
+# User Chris Coulson <chris.coulson@canonical.com>
+# Date 1348936377 14400
+# Node ID e05d8c7fc54b598630a927569f92c18991d0765b
+# Parent  6ce8440e0e2f67d9c1efc4be40d718a54b3f219e
+Bug 795395 - Don't unload the library immediately on failure on nsGSettingsService::Init(). r=karlt
+We return a failure anyway, so the component manager calls our destructor where we do the unload
+
+diff --git a/toolkit/system/gnome/nsGSettingsService.cpp b/toolkit/system/gnome/nsGSettingsService.cpp
+--- a/toolkit/system/gnome/nsGSettingsService.cpp
++++ b/toolkit/system/gnome/nsGSettingsService.cpp
+@@ -307,17 +307,16 @@ nsGSettingsService::Init()
+     if (!gioLib)
+       return NS_ERROR_FAILURE;
+   }
+ 
+   for (PRUint32 i = 0; i < ArrayLength(kGSettingsSymbols); i++) {
+     *kGSettingsSymbols[i].function =
+       PR_FindFunctionSymbol(gioLib, kGSettingsSymbols[i].functionName);
+     if (!*kGSettingsSymbols[i].function) {
+-      PR_UnloadLibrary(gioLib);
+       return NS_ERROR_FAILURE;
+     }
+   }
+ 
+   return NS_OK;
+ }
+ 
+ NS_IMPL_ISUPPORTS1(nsGSettingsService, nsIGSettingsService)
+
+
